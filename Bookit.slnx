@@ -1,8 +1,12 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Bookit.Application/Bookit.Application.csproj" />
     <Project Path="src/Bookit.Domain/Bookit.Domain.csproj" />
+    <Project Path="src/Bookit.Infrastructure/Bookit.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Bookit.Application.Tests/Bookit.Application.Tests.csproj" />
     <Project Path="tests/Bookit.Domain.Tests/Bookit.Domain.Tests.csproj" />
+    <Project Path="tests/Bookit.Infrastructure.IntegrationTests/Bookit.Infrastructure.IntegrationTests.csproj" />
   </Folder>
 </Solution>
