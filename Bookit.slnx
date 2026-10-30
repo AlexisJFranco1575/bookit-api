@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Bookit.Api/Bookit.Api.csproj" />
     <Project Path="src/Bookit.Application/Bookit.Application.csproj" />
     <Project Path="src/Bookit.Domain/Bookit.Domain.csproj" />
     <Project Path="src/Bookit.Infrastructure/Bookit.Infrastructure.csproj" />
