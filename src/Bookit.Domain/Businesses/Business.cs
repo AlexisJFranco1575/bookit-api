@@ -14,6 +14,9 @@ public sealed class Business
 
     public Guid Id { get; private set; }
 
+    /// <summary>The user who manages this business.</summary>
+    public Guid OwnerId { get; private set; }
+
     public string Name { get; private set; } = string.Empty;
 
     /// <summary>An IANA time zone id such as America/Guayaquil.</summary>
@@ -23,8 +26,15 @@ public sealed class Business
 
     public TimeZoneInfo TimeZone => TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
 
-    public static Business Create(string? name, string? timeZoneId, DateTimeOffset now)
+    public bool IsOwnedBy(Guid userId) => OwnerId == userId;
+
+    public static Business Create(Guid ownerId, string? name, string? timeZoneId, DateTimeOffset now)
     {
+        if (ownerId == Guid.Empty)
+        {
+            throw new DomainException("A business needs an owner.");
+        }
+
         var cleanName = name?.Trim() ?? string.Empty;
 
         if (cleanName.Length is 0 or > MaxNameLength)
@@ -42,6 +52,7 @@ public sealed class Business
         return new Business
         {
             Id = Guid.CreateVersion7(),
+            OwnerId = ownerId,
             Name = cleanName,
             TimeZoneId = zoneId,
             CreatedAt = now

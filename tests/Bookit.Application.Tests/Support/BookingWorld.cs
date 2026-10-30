@@ -12,6 +12,8 @@ internal sealed class BookingWorld
 {
     public static readonly DateTimeOffset Now = new(2026, 10, 31, 12, 0, 0, TimeSpan.Zero);
 
+    public static readonly Guid OwnerId = Guid.Parse("11111111-1111-4111-8111-111111111111");
+
     public FakeBusinessRepository Businesses { get; } = new();
 
     public FakeServiceRepository Services { get; } = new();
@@ -30,7 +32,7 @@ internal sealed class BookingWorld
 
     public BookingWorld()
     {
-        Shop = Business.Create("Barber Shop", "America/Guayaquil", Now);
+        Shop = Business.Create(OwnerId, "Barber Shop", "America/Guayaquil", Now);
         Haircut = Service.Create(Shop.Id, "Haircut", 30);
         Barber = Provider.Create(
             Shop.Id,
