@@ -84,12 +84,17 @@ namespace Bookit.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TimeZoneId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Businesses", (string)null);
                 });
@@ -137,6 +142,37 @@ namespace Bookit.Infrastructure.Persistence.Migrations
                     b.ToTable("Services", (string)null);
                 });
 
+            modelBuilder.Entity("Bookit.Domain.Users.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users", (string)null);
+                });
+
             modelBuilder.Entity("Bookit.Domain.Appointments.Appointment", b =>
                 {
                     b.HasOne("Bookit.Domain.Businesses.Provider", null)
@@ -148,6 +184,15 @@ namespace Bookit.Infrastructure.Persistence.Migrations
                     b.HasOne("Bookit.Domain.Businesses.Service", null)
                         .WithMany()
                         .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Bookit.Domain.Businesses.Business", b =>
+                {
+                    b.HasOne("Bookit.Domain.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

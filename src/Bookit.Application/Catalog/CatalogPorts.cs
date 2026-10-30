@@ -9,6 +9,8 @@ public interface IBusinessRepository
     Task AddAsync(Business business, CancellationToken cancellationToken);
 
     Task<Business?> GetAsync(Guid id, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<Business>> ListByOwnerAsync(Guid ownerId, CancellationToken cancellationToken);
 }
 
 public interface IServiceRepository

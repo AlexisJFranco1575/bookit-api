@@ -6,7 +6,10 @@ using Bookit.Domain.Scheduling;
 
 namespace Bookit.Application.Catalog;
 
-/// <summary>Sets up what can be booked: businesses, their services and their providers.</summary>
+/// <summary>
+/// Sets up what can be booked: businesses, their services and their providers.
+/// Methods that change data take the owner's id; reading is public so customers can see the booking page.
+/// </summary>
 public sealed class CatalogService(
     IBusinessRepository businesses,
     IServiceRepository services,
@@ -14,25 +17,36 @@ public sealed class CatalogService(
     TimeProvider clock)
 {
     public async Task<BusinessResponse> CreateBusinessAsync(
+        Guid ownerId,
         CreateBusinessRequest request,
         CancellationToken cancellationToken)
     {
-        var business = Business.Create(request.Name, request.TimeZoneId, clock.GetUtcNow());
+        var business = Business.Create(ownerId, request.Name, request.TimeZoneId, clock.GetUtcNow());
 
         await businesses.AddAsync(business, cancellationToken);
 
         return BusinessResponse.From(business);
     }
 
+    public async Task<IReadOnlyList<BusinessResponse>> ListOwnedBusinessesAsync(
+        Guid ownerId,
+        CancellationToken cancellationToken)
+    {
+        var items = await businesses.ListByOwnerAsync(ownerId, cancellationToken);
+
+        return items.Select(BusinessResponse.From).ToList();
+    }
+
     public async Task<BusinessResponse> GetBusinessAsync(Guid businessId, CancellationToken cancellationToken) =>
         BusinessResponse.From(await RequireBusinessAsync(businessId, cancellationToken));
 
     public async Task<ServiceResponse> AddServiceAsync(
+        Guid ownerId,
         Guid businessId,
         CreateServiceRequest request,
         CancellationToken cancellationToken)
     {
-        await RequireBusinessAsync(businessId, cancellationToken);
+        await RequireOwnedBusinessAsync(ownerId, businessId, cancellationToken);
 
         var service = Service.Create(businessId, request.Name, request.DurationMinutes);
 
@@ -53,11 +67,12 @@ public sealed class CatalogService(
     }
 
     public async Task<ProviderResponse> AddProviderAsync(
+        Guid ownerId,
         Guid businessId,
         CreateProviderRequest request,
         CancellationToken cancellationToken)
     {
-        await RequireBusinessAsync(businessId, cancellationToken);
+        await RequireOwnedBusinessAsync(ownerId, businessId, cancellationToken);
 
         var schedule = new WeeklySchedule((request.WorkingPeriods ?? []).Select(ToPeriod));
         var provider = Provider.Create(businessId, request.Name, schedule);
@@ -81,6 +96,20 @@ public sealed class CatalogService(
     private async Task<Business> RequireBusinessAsync(Guid businessId, CancellationToken cancellationToken) =>
         await businesses.GetAsync(businessId, cancellationToken)
         ?? throw new NotFoundException("Business", businessId);
+
+    /// <summary>
+    /// A business that belongs to someone else is reported as "not found", exactly like one that does not exist,
+    /// so nobody can discover which business ids exist by trying them.
+    /// </summary>
+    private async Task<Business> RequireOwnedBusinessAsync(
+        Guid ownerId,
+        Guid businessId,
+        CancellationToken cancellationToken)
+    {
+        var business = await RequireBusinessAsync(businessId, cancellationToken);
+
+        return business.IsOwnedBy(ownerId) ? business : throw new NotFoundException("Business", businessId);
+    }
 
     private static WorkingPeriod ToPeriod(WorkingPeriodDto dto)
     {

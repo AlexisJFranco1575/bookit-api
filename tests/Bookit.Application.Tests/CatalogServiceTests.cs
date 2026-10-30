@@ -9,6 +9,8 @@ namespace Bookit.Application.Tests;
 
 public class CatalogServiceTests
 {
+    private static readonly Guid OwnerId = BookingWorld.OwnerId;
+
     private readonly FakeBusinessRepository _businesses = new();
     private readonly FakeServiceRepository _services = new();
     private readonly FakeProviderRepository _providers = new();
@@ -23,19 +25,21 @@ public class CatalogServiceTests
             new FixedTimeProvider(BookingWorld.Now));
     }
 
-    private Task<BusinessResponse> CreateBusinessAsync() =>
+    private Task<BusinessResponse> CreateBusinessAsync(Guid? ownerId = null) =>
         _catalog.CreateBusinessAsync(
+            ownerId ?? OwnerId,
             new CreateBusinessRequest("Barber Shop", "America/Guayaquil"),
             CancellationToken.None);
 
     [Fact]
-    public async Task Creates_a_business()
+    public async Task Creates_a_business_owned_by_the_caller()
     {
         var response = await CreateBusinessAsync();
 
         Assert.Equal("Barber Shop", response.Name);
         Assert.Equal("America/Guayaquil", response.TimeZoneId);
         Assert.Single(_businesses.Items);
+        Assert.True(_businesses.Items[0].IsOwnedBy(OwnerId));
     }
 
     [Fact]
@@ -43,6 +47,7 @@ public class CatalogServiceTests
     {
         await Assert.ThrowsAsync<DomainException>(() =>
             _catalog.CreateBusinessAsync(
+                OwnerId,
                 new CreateBusinessRequest("Barber Shop", "Mars/Olympus"),
                 CancellationToken.None));
 
@@ -50,13 +55,40 @@ public class CatalogServiceTests
     }
 
     [Fact]
+    public async Task Lists_only_the_businesses_of_the_owner()
+    {
+        await CreateBusinessAsync();
+        await CreateBusinessAsync(Guid.NewGuid());
+
+        var mine = await _catalog.ListOwnedBusinessesAsync(OwnerId, CancellationToken.None);
+
+        Assert.Single(mine);
+    }
+
+    [Fact]
     public async Task Adding_a_service_to_an_unknown_business_fails_with_not_found()
     {
         await Assert.ThrowsAsync<NotFoundException>(() =>
             _catalog.AddServiceAsync(
+                OwnerId,
                 Guid.NewGuid(),
                 new CreateServiceRequest("Haircut", 30),
                 CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Adding_a_service_to_someone_elses_business_fails_with_not_found()
+    {
+        var business = await CreateBusinessAsync();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            _catalog.AddServiceAsync(
+                Guid.NewGuid(),
+                business.Id,
+                new CreateServiceRequest("Haircut", 30),
+                CancellationToken.None));
+
+        Assert.Empty(_services.Items);
     }
 
     [Fact]
@@ -65,6 +97,7 @@ public class CatalogServiceTests
         var business = await CreateBusinessAsync();
 
         var response = await _catalog.AddProviderAsync(
+            OwnerId,
             business.Id,
             new CreateProviderRequest("Carlos", [new WorkingPeriodDto(DayOfWeek.Monday, "09:00", "12:00")]),
             CancellationToken.None);
@@ -81,6 +114,7 @@ public class CatalogServiceTests
 
         await Assert.ThrowsAsync<DomainException>(() =>
             _catalog.AddProviderAsync(
+                OwnerId,
                 business.Id,
                 new CreateProviderRequest("Carlos", [new WorkingPeriodDto(DayOfWeek.Monday, "9am", "12:00")]),
                 CancellationToken.None));
@@ -93,6 +127,7 @@ public class CatalogServiceTests
 
         await Assert.ThrowsAsync<DomainException>(() =>
             _catalog.AddProviderAsync(
+                OwnerId,
                 business.Id,
                 new CreateProviderRequest(
                     "Carlos",

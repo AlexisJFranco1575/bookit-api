@@ -102,7 +102,7 @@ public class BookingServiceTests
     [Fact]
     public async Task Rejects_a_service_from_another_business()
     {
-        var other = Business.Create("Other Shop", "America/Guayaquil", BookingWorld.Now);
+        var other = Business.Create(BookingWorld.OwnerId, "Other Shop", "America/Guayaquil", BookingWorld.Now);
         var foreignService = Service.Create(other.Id, "Massage", 60);
         _world.Businesses.Items.Add(other);
         _world.Services.Items.Add(foreignService);

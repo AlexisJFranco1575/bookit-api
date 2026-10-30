@@ -23,6 +23,16 @@ internal sealed class FakeBusinessRepository : IBusinessRepository
 
     public Task<Business?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(Items.FirstOrDefault(business => business.Id == id));
+
+    public Task<IReadOnlyList<Business>> ListByOwnerAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        IReadOnlyList<Business> list = Items
+            .Where(business => business.OwnerId == ownerId)
+            .OrderBy(business => business.Name)
+            .ToList();
+
+        return Task.FromResult(list);
+    }
 }
 
 internal sealed class FakeServiceRepository : IServiceRepository

@@ -5,6 +5,7 @@ using Bookit.Application.Common;
 using Bookit.Domain.Appointments;
 using Bookit.Domain.Businesses;
 using Bookit.Domain.Scheduling;
+using Bookit.Domain.Users;
 using Bookit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -30,10 +31,13 @@ public class BookingDatabaseTests(SqlServerFixture fixture) : IClassFixture<SqlS
     {
         await using var db = fixture.CreateContext();
 
-        var business = Business.Create("Barber Shop", "America/Guayaquil", Now);
+        // Every business needs an owner. The email is unique per call because all tests share one database.
+        var owner = User.Create($"owner-{Guid.NewGuid():N}@example.com", "Owner", "not-a-real-hash", Now);
+        var business = Business.Create(owner.Id, "Barber Shop", "America/Guayaquil", Now);
         var service = Service.Create(business.Id, "Haircut", 30);
         var provider = Provider.Create(business.Id, "Carlos", Schedule);
 
+        await new UserRepository(db).AddAsync(owner, CancellationToken.None);
         await new BusinessRepository(db).AddAsync(business, CancellationToken.None);
         await new ServiceRepository(db).AddAsync(service, CancellationToken.None);
         await new ProviderRepository(db).AddAsync(provider, CancellationToken.None);
