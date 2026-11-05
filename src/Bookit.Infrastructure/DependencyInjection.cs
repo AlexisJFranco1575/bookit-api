@@ -1,3 +1,4 @@
+using Bookit.Application.Agenda;
 using Bookit.Application.Auth;
 using Bookit.Application.Booking;
 using Bookit.Application.Catalog;
@@ -10,8 +11,8 @@ namespace Bookit.Infrastructure;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the repositories and the password hasher. The DbContext itself is registered by the host,
-    /// because only the host knows where the connection string comes from.
+    /// Registers the repositories, the agenda query and the password hasher. The DbContext itself is
+    /// registered by the host, because only the host knows where the connection string comes from.
     /// </summary>
     public static IServiceCollection AddBookitInfrastructure(this IServiceCollection services)
     {
@@ -20,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceRepository, ServiceRepository>();
         services.AddScoped<IProviderRepository, ProviderRepository>();
         services.AddScoped<IAppointmentRepository, AppointmentRepository>();
+        services.AddScoped<IAgendaReader, AgendaReader>();
 
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 

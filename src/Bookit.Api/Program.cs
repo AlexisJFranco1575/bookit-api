@@ -3,6 +3,7 @@ using Bookit.Api;
 using Bookit.Api.Auth;
 using Bookit.Api.Endpoints;
 using Bookit.Api.Errors;
+using Bookit.Application.Agenda;
 using Bookit.Application.Auth;
 using Bookit.Application.Booking;
 using Bookit.Application.Catalog;
@@ -38,6 +39,7 @@ builder.Services.AddSingleton<SlotCalculator>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<BookingService>();
+builder.Services.AddScoped<AgendaService>();
 
 builder.Services.AddBookitAuthentication();
 builder.Services.AddBookitRateLimiting();
@@ -75,6 +77,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("Health"
 app.MapAuthEndpoints();
 app.MapCatalogEndpoints();
 app.MapBookingEndpoints();
+app.MapAgendaEndpoints();
 
 app.Run();
 
