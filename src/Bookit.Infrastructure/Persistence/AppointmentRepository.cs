@@ -2,6 +2,7 @@ using System.Data;
 using Bookit.Application.Booking;
 using Bookit.Application.Common;
 using Bookit.Domain.Appointments;
+using Bookit.Domain.Notifications;
 using Bookit.Domain.Scheduling;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,9 @@ public sealed class AppointmentRepository(BookitDbContext db) : IAppointmentRepo
 
     public async Task<bool> TryAddAsync(Appointment appointment, CancellationToken cancellationToken)
     {
+        // NEW: declared outside the try so the catch below can discard it too.
+        OutboxMessage? confirmation = null;
+
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         try
@@ -64,7 +68,15 @@ public sealed class AppointmentRepository(BookitDbContext db) : IAppointmentRepo
                 return false;
             }
 
+            // NEW: the confirmation email is saved in the same transaction as the appointment. Either both
+            // exist or neither does, so a mail outage can never lose a confirmation.
+            confirmation = OutboxMessage.Create(
+                NotificationType.AppointmentBooked,
+                appointment.Id,
+                appointment.CreatedAt);
+
             db.Appointments.Add(appointment);
+            db.OutboxMessages.Add(confirmation);
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
@@ -75,6 +87,12 @@ public sealed class AppointmentRepository(BookitDbContext db) : IAppointmentRepo
         {
             // The unique index caught a duplicate the lock should already have prevented. Treat it as taken.
             db.Entry(appointment).State = EntityState.Detached;
+
+            if (confirmation is not null)
+            {
+                db.Entry(confirmation).State = EntityState.Detached;
+            }
+
             return false;
         }
     }
@@ -82,7 +100,32 @@ public sealed class AppointmentRepository(BookitDbContext db) : IAppointmentRepo
     public Task<Appointment?> GetAsync(Guid id, CancellationToken cancellationToken) =>
         db.Appointments.FirstOrDefaultAsync(appointment => appointment.Id == id, cancellationToken);
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        // NEW: any appointment that goes from booked to cancelled in this save also queues its notice.
+        QueueCancellationNotices();
+
+        return db.SaveChangesAsync(cancellationToken);
+    }
+
+    private void QueueCancellationNotices()
+    {
+        var cancelled = db.ChangeTracker.Entries<Appointment>()
+            .Where(entry => entry.State == EntityState.Modified
+                            && entry.Entity.Status == AppointmentStatus.Cancelled
+                            && entry.OriginalValues.GetValue<AppointmentStatus>(nameof(Appointment.Status))
+                            == AppointmentStatus.Booked)
+            .Select(entry => entry.Entity)
+            .ToList();
+
+        foreach (var appointment in cancelled)
+        {
+            db.OutboxMessages.Add(OutboxMessage.Create(
+                NotificationType.AppointmentCancelled,
+                appointment.Id,
+                appointment.CancelledAt ?? appointment.CreatedAt));
+        }
+    }
 
     private async Task AcquireProviderLockAsync(Guid providerId, CancellationToken cancellationToken)
     {
