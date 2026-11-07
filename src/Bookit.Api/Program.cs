@@ -11,6 +11,7 @@ using Bookit.Application.Catalog;
 using Bookit.Domain.Scheduling;
 using Bookit.Infrastructure;
 using Bookit.Infrastructure.Persistence;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
@@ -46,6 +47,23 @@ builder.Services.AddBookitAuthentication();
 builder.Services.AddBookitRateLimiting();
 builder.Services.AddBookitNotifications();
 
+// Behind a reverse proxy (Azure Container Apps ingress) the client address arrives in X-Forwarded-For.
+// Only turn this on when the API is reachable exclusively through that proxy.
+var trustForwardedHeaders = builder.Configuration.GetValue<bool>("Proxy:TrustForwardedHeaders");
+
+if (trustForwardedHeaders)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        // The ingress address is not known in advance; the default limit of one hop makes the API read the
+        // right-most entry, which is the one the ingress itself appended, so a client cannot forge it.
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
 // Browsers may call the API only from the origins listed in configuration (none by default).
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 {
@@ -55,6 +73,12 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 }));
 
 var app = builder.Build();
+
+if (trustForwardedHeaders)
+{
+    // Must run before anything that reads the client address, such as the rate limiter.
+    app.UseForwardedHeaders();
+}
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

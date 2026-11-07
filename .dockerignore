@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+.git/
+.github/
+tests/
+*.md
+Dockerfile
+.dockerignore
+**/appsettings.Development.json
+**/secrets.json
