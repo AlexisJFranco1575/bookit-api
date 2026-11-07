@@ -35,7 +35,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Jwt:SigningKey"] = SigningKey,
                 ["Database:MigrateOnStartup"] = "true",
                 ["RateLimiting:AuthPermitLimit"] = "1000",
-                ["RateLimiting:BookingPermitLimit"] = "1000"
+                ["RateLimiting:BookingPermitLimit"] = "1000",
+
+                // No real emails in tests, and no background worker unless a test turns it on.
+                ["Email:Mode"] = "Log",
+                ["Notifications:WorkerEnabled"] = "false"
             }));
     }
 }

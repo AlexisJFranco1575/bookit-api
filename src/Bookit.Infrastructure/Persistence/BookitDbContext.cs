@@ -1,5 +1,6 @@
 using Bookit.Domain.Appointments;
 using Bookit.Domain.Businesses;
+using Bookit.Domain.Notifications;
 using Bookit.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +17,8 @@ public sealed class BookitDbContext(DbContextOptions<BookitDbContext> options) :
     public DbSet<Provider> Providers => Set<Provider>();
 
     public DbSet<Appointment> Appointments => Set<Appointment>();
+
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(BookitDbContext).Assembly);
