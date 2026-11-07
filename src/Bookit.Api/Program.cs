@@ -3,6 +3,7 @@ using Bookit.Api;
 using Bookit.Api.Auth;
 using Bookit.Api.Endpoints;
 using Bookit.Api.Errors;
+using Bookit.Api.Notifications;
 using Bookit.Application.Agenda;
 using Bookit.Application.Auth;
 using Bookit.Application.Booking;
@@ -43,6 +44,7 @@ builder.Services.AddScoped<AgendaService>();
 
 builder.Services.AddBookitAuthentication();
 builder.Services.AddBookitRateLimiting();
+builder.Services.AddBookitNotifications();
 
 // Browsers may call the API only from the origins listed in configuration (none by default).
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
